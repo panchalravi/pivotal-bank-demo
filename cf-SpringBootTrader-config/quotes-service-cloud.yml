@@ -1,4 +1,4 @@
-spring:
-  cloud:
-    services:
-      registrationMethod: direct
+#spring:
+#  cloud:
+#    services:
+#      registrationMethod: direct
