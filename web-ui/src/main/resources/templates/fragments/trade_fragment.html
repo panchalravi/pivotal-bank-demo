@@ -13,7 +13,7 @@
                     &nbsp;
                     <button type="submit" class="btn btn-success">Get Quotes</button>
                 </form>
-				<form class="form-inline" action="#" th:action="@{/trade/kill}" method="get">
+				<form class="form-inline" action="#" th:action="@{/trade/kill}" method="post" th:object="${search}">
 					&nbsp;
 					<button type="submit" class="btn btn-success">Kill</button>
 				</form>
@@ -49,8 +49,6 @@
                 </div>
             </div>
         </div>
-    </div>
-    </div>
     </div>
 </th:block>
 

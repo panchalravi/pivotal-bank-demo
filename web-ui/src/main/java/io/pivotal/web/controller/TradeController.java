@@ -104,7 +104,7 @@ public class TradeController {
 		return "trade";
 	}
 
-	@RequestMapping(value = "/trade/kill", method = RequestMethod.GET)
+	@RequestMapping(value = "/trade/kill", method = RequestMethod.POST)
 	public String killTrade(Model model) {
 		logger.debug("/trade/kill.GET");
 		marketService.killInstance();
