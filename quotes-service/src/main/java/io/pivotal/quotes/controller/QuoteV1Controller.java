@@ -108,7 +108,7 @@ public class QuoteV1Controller {
 	}
 
 	@RequestMapping(value = "/basics", method = RequestMethod.GET)
-	public ResponseEntity<Map<String, Object>> kill(HttpServletRequest request, @RequestParam(value = "doit", required = false) boolean doit) throws Exception {
+	public ResponseEntity<String> kill(HttpServletRequest request, @RequestParam(value = "doit", required = false) boolean doit) throws Exception {
 		logger.warn("*** The system is shutting down. ***");
 		if(doit) {
 			Runnable killTask = () -> {
@@ -124,9 +124,9 @@ public class QuoteV1Controller {
 			};
 			new Thread(killTask).start();
 		}
-		final Map<String, Object> info = environmentHelper.addAppEnv(request);
-		logInstanceInfo(info);
-		return new ResponseEntity<Map<String, Object>>(info, HttpStatus.OK);
+		//final Map<String, Object> info = environmentHelper.addAppEnv(request);
+		//logInstanceInfo(info);
+		return new ResponseEntity<>("Instance shutdown initiated", HttpStatus.OK);
 	}
 
 

@@ -25,10 +25,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.servlet.ModelAndView;
 
@@ -71,6 +68,8 @@ public class TradeController {
 		
 		return "trade";
 	}
+
+
 	@RequestMapping(value = "/trade", method = RequestMethod.POST)
 	public String showTrade(Model model, @ModelAttribute("search") Search search) {
 		logger.debug("/trade.POST - symbol: " + search.getName());
@@ -96,12 +95,20 @@ public class TradeController {
 		    try {
 		    	model.addAttribute("portfolio",portfolioService.getPortfolio(currentUserName));
 		    	model.addAttribute("accounts",accountService.getAccounts(currentUserName));
+				model.addAttribute("instanceInfo", marketService.getInstanceInfo());
 		    } catch (HttpServerErrorException e) {
 		    	model.addAttribute("portfolioRetrievalError",e.getMessage());
 		    }
 		}
 		
 		return "trade";
+	}
+
+	@RequestMapping(value = "/trade/kill", method = RequestMethod.GET)
+	public String killTrade(Model model) {
+		logger.debug("/trade/kill.GET");
+		marketService.killInstance();
+		return showTrade(model);
 	}
 	
 	@RequestMapping(value = "/order", method = RequestMethod.POST)
@@ -123,6 +130,7 @@ public class TradeController {
 				    try {
 				    	model.addAttribute("accounts",accountService.getAccounts(currentUserName));
 				    	model.addAttribute("portfolio",portfolioService.getPortfolio(currentUserName));
+						model.addAttribute("instanceInfo", marketService.getInstanceInfo());
 				    } catch (HttpServerErrorException e) {
 				    	model.addAttribute("portfolioRetrievalError",e.getMessage());
 				    }

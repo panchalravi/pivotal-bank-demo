@@ -63,13 +63,23 @@ public class QuotesService {
 		CompanyInfo[] infos = restTemplate.getForObject(downstreamProtocol + "://" + quotesService + "/v1/company/{name}", CompanyInfo[].class, name);
 		return Arrays.asList(infos);
 	}
-	
+	/*
+	* @return
+	*/
+	public String killInstance() {
+		return restTemplate.getForObject(downstreamProtocol + "://" + quotesService + "/v1/basics?doit=true", String.class);
+	}
+
 	public Map<String, Object> getInstanceInfo() {
 		logger.debug("Fetching quotes service instance info... ");
 		Map<String, Object> instanceInfo = restTemplate.getForObject(downstreamProtocol + "://" + quotesService + "/v1/basics", Map.class);
 		return instanceInfo;
 	}
 
+	/**
+	 * @param name
+	 * @return
+	 */
 	private List<CompanyInfo> getCompaniesFallback(String name) {
 		List<CompanyInfo> infos = new ArrayList<>();
 		return infos;
