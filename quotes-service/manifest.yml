@@ -1,10 +1,10 @@
 ---
 applications:
-- name: quotes
+- name: quotes-v2
   path: build/libs/quotes.jar
   services: [ discovery-service, circuit-breaker-dashboard, config-server ]
   timeout: 180
-  instances: 2
+  instances: 1
   memory: 1G
   random-route: true
 # When deployed to environments with self-signed certs, you have to reference your api here.  See
