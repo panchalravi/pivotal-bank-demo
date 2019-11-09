@@ -63,8 +63,7 @@ public class QuotesService {
 		CompanyInfo[] infos = restTemplate.getForObject(downstreamProtocol + "://" + quotesService + "/v1/company/{name}", CompanyInfo[].class, name);
 		return Arrays.asList(infos);
 	}
-
-	@HystrixCommand(fallbackMethod = "getCompaniesFallback")
+	
 	public Map<String, Object> getInstanceInfo() {
 		logger.debug("Fetching quotes service instance info... ");
 		Map<String, Object> instanceInfo = restTemplate.getForObject(downstreamProtocol + "://" + quotesService + "/v1/basics", Map.class);
