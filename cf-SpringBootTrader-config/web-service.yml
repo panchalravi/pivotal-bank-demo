@@ -4,7 +4,7 @@ spring:
 eureka:
   client:
     registerWithEureka: true
-    registryFetchIntervalSeconds: 10
+    registryFetchIntervalSeconds: 3
 pivotal:
   summary:
     quotes: 3
