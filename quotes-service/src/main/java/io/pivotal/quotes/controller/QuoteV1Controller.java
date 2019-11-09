@@ -4,12 +4,16 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import com.netflix.discovery.converters.Auto;
 import io.pivotal.quotes.domain.CompanyInfo;
 import io.pivotal.quotes.domain.Quote;
 import io.pivotal.quotes.exception.SymbolNotFoundException;
+import io.pivotal.quotes.service.EnvironmentHelper;
 import io.pivotal.quotes.service.QuoteService;
 
 import org.slf4j.Logger;
@@ -46,6 +50,9 @@ public class QuoteV1Controller {
 	@Autowired
 	private QuoteService service;
 
+	@Autowired
+	private EnvironmentHelper environmentHelper;
+
 	/**
 	 * Retrieves the current quotes for the given symbols.
 	 * 
@@ -56,7 +63,7 @@ public class QuoteV1Controller {
 	 *             if the symbol is not valid.
 	 */
 	@RequestMapping(value = "/quotes", method = RequestMethod.GET)
-	public ResponseEntity<List<Quote>> getQuotes(@RequestParam(value="q", required=false) String query) throws SymbolNotFoundException{
+	public ResponseEntity<List<Quote>> getQuotes(@RequestParam(value="q", required=false) String query, HttpServletRequest request) throws SymbolNotFoundException{
 		logger.debug("received Quote query for: "+ query);
 		if (query == null) {
 			//return empty list.
@@ -71,6 +78,8 @@ public class QuoteV1Controller {
 			quotes.add(service.getQuote(splitQuery[0]));
 		}
 		logger.info(String.format("Retrieved symbols: %s with quotes {}", query, quotes));
+
+		logInstanceInfo(request);
 		return new ResponseEntity<List<Quote>>(quotes, getNoCacheHeaders(), HttpStatus.OK);
 	}
 
@@ -98,6 +107,35 @@ public class QuoteV1Controller {
 		HttpHeaders responseHeaders = new HttpHeaders();
 		responseHeaders.set("Cache-Control", "no-cache");
 		return responseHeaders;
+	}
+
+	@RequestMapping(value = "/basics", method = RequestMethod.GET)
+	public ResponseEntity<String> kill(HttpServletRequest request, @RequestParam(value = "doit", required = false) boolean doit) throws Exception {
+		logger.warn("*** The system is shutting down. ***");
+		if(doit) {
+			Runnable killTask = () -> {
+				try {
+					String name = Thread.currentThread().getName();
+					logger.warn("killing shortly " + name);
+					TimeUnit.SECONDS.sleep(5);
+					logger.warn("killed " + name);
+					System.exit(0);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			};
+			new Thread(killTask).start();
+		}
+		logInstanceInfo(request);
+		return new ResponseEntity<String>(HttpStatus.OK);
+	}
+
+	private void logInstanceInfo(HttpServletRequest request) {
+		try {
+			logger.info("Quotes instance info: {}", environmentHelper.addAppEnv(request));
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 
 	/**
