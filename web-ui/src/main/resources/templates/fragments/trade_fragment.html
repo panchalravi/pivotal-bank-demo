@@ -1,7 +1,7 @@
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org">
 
 <th:block th:fragment="company_input">
-	<div th:if="${search != null}" class="col-md-12">
+	<div th:if="${search != null}" class="col-md-6">
 		<div id="quote-control" class="panel panel-default">
 			<div class="panel-body">
 				<form class="form-inline" action="#" th:action="@{/trade}" method="post"
@@ -14,6 +14,11 @@
 					<button type="submit" class="btn btn-success">Get Quotes</button>
 				</form>
 			</div>
+		</div>
+	</div>
+	<div th:if="${instanceInfo != null}" class="col-md-6">
+		<div id="quotes-instance-info" class="panel panel-default">
+			<p th:text="${instanceInfo.containerAddr}"></p>
 		</div>
 	</div>
 </th:block>

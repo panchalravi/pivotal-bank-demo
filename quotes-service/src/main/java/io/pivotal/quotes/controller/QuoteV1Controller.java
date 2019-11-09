@@ -78,8 +78,6 @@ public class QuoteV1Controller {
 			quotes.add(service.getQuote(splitQuery[0]));
 		}
 		logger.info(String.format("Retrieved symbols: %s with quotes {}", query, quotes));
-
-		logInstanceInfo(request);
 		return new ResponseEntity<List<Quote>>(quotes, getNoCacheHeaders(), HttpStatus.OK);
 	}
 
@@ -110,7 +108,7 @@ public class QuoteV1Controller {
 	}
 
 	@RequestMapping(value = "/basics", method = RequestMethod.GET)
-	public ResponseEntity<String> kill(HttpServletRequest request, @RequestParam(value = "doit", required = false) boolean doit) throws Exception {
+	public ResponseEntity<Map<String, Object>> kill(HttpServletRequest request, @RequestParam(value = "doit", required = false) boolean doit) throws Exception {
 		logger.warn("*** The system is shutting down. ***");
 		if(doit) {
 			Runnable killTask = () -> {
@@ -126,13 +124,16 @@ public class QuoteV1Controller {
 			};
 			new Thread(killTask).start();
 		}
-		logInstanceInfo(request);
-		return new ResponseEntity<String>(HttpStatus.OK);
+		final Map<String, Object> info = environmentHelper.addAppEnv(request);
+		logInstanceInfo(info);
+		return new ResponseEntity<Map<String, Object>>(info, HttpStatus.OK);
 	}
 
-	private void logInstanceInfo(HttpServletRequest request) {
+
+
+	private void logInstanceInfo(Map<String, Object> info) {
 		try {
-			logger.info("Quotes instance info: {}", environmentHelper.addAppEnv(request));
+			logger.info("Quotes instance info: {}", info);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

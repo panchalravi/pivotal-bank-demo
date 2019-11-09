@@ -63,6 +63,7 @@ public class TradeController {
 		    try {
 		    	model.addAttribute("portfolio",portfolioService.getPortfolio(currentUserName));
 		    	model.addAttribute("accounts",accountService.getAccounts(currentUserName));
+		    	model.addAttribute("instanceInfo", marketService.getInstanceInfo());
 		    } catch (HttpServerErrorException e) {
 		    	model.addAttribute("portfolioRetrievalError",e.getMessage());
 		    }
