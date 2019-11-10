@@ -18,11 +18,11 @@ body {
 }
 
 .btn-success {
-    background-color: #138078;
+    background-color: #b4810e;
     border-color: #333333;
 }
 .btn-success:hover, .btn-success:focus, .btn-success:active, .btn-success.active {
-    background-color: #0F635D;
+    background-color: #b46b0e;
     border-color: #333333;
 }
 .container-with-min-width {
