@@ -3,3 +3,4 @@ accounts-service
 portfolio-service
 web-ui
 user-service
+zipkin-server
