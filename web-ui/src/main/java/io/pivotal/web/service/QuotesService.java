@@ -122,6 +122,7 @@ public class QuotesService {
 	 * @param symbols
 	 * @return
 	 */
+	@HystrixCommand(fallbackMethod = "getMultipleQuotesFallback")
 	public List<Quote> getMultipleQuotes(Collection<String> symbols) {
 		logger.debug("Fetching multiple quotes array: {} ",symbols);
 		StringBuilder builder = new StringBuilder();
@@ -132,6 +133,12 @@ public class QuotesService {
 			}
 		}
 		return getMultipleQuotes(builder.toString());
+	}
+
+	public List<Quote> getMultipleQuotesFallback(Collection<String> symbols) {
+		logger.debug("Fetching multiple quotes array: {} ",symbols);
+		List<Quote> quotes = new ArrayList<>();
+		return quotes;
 	}
 
 }
