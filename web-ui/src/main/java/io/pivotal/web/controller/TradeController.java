@@ -8,6 +8,8 @@ import java.util.stream.Collectors;
 
 import javax.servlet.http.HttpServletRequest;
 
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixProperty;
 import io.pivotal.web.domain.Account;
 import io.pivotal.web.domain.CompanyInfo;
 import io.pivotal.web.domain.Order;
@@ -32,154 +34,182 @@ import org.springframework.web.servlet.ModelAndView;
 @Controller
 public class TradeController {
 
-	private static final Logger logger = LoggerFactory
-			.getLogger(TradeController.class);
-	
-	@Autowired
-	private QuotesService marketService;
-	
-	@Autowired
-	private PortfolioService portfolioService;
-	
-	@Autowired
-	private AccountService accountService;
-	
-	@RequestMapping(value = "/trade", method = RequestMethod.GET)
-	public String showTrade(Model model) {
-		logger.debug("/trade.GET");
-		//model.addAttribute("marketSummary", marketService.getMarketSummary());
-		
-		model.addAttribute("search", new Search());
-		//check if user is logged in!
-		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-		if (!(authentication instanceof AnonymousAuthenticationToken)) {
-		    String currentUserName = authentication.getName();
-		    logger.debug("User logged in: " + currentUserName);
-		    model.addAttribute("order", new Order());
-		    
-		    try {
-		    	model.addAttribute("portfolio",portfolioService.getPortfolio(currentUserName));
-		    	model.addAttribute("accounts",accountService.getAccounts(currentUserName));
-		    	model.addAttribute("instanceInfo", marketService.getInstanceInfo());
-		    } catch (HttpServerErrorException e) {
-		    	model.addAttribute("portfolioRetrievalError",e.getMessage());
-		    }
-		}
-		
-		return "trade";
-	}
+    private static final Logger logger = LoggerFactory
+            .getLogger(TradeController.class);
+
+    @Autowired
+    private QuotesService marketService;
+
+    @Autowired
+    private PortfolioService portfolioService;
+
+    @Autowired
+    private AccountService accountService;
+
+    @RequestMapping(value = "/trade", method = RequestMethod.GET)
+    @HystrixCommand(fallbackMethod = "showTradeGetFallback", commandProperties = {
+            @HystrixProperty(name = "execution.isolation.strategy", value = "SEMAPHORE")
+    })
+    public String showTrade(Model model) {
+        logger.debug("/trade.GET");
+        //model.addAttribute("marketSummary", marketService.getMarketSummary());
+
+        model.addAttribute("search", new Search());
+        //check if user is logged in!
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        logger.debug("Authentication info: {}", authentication);
+        if (!(authentication instanceof AnonymousAuthenticationToken)) {
+            String currentUserName = authentication.getName();
+            logger.debug("User logged in: " + currentUserName);
+            model.addAttribute("order", new Order());
+
+            try {
+                model.addAttribute("portfolio", portfolioService.getPortfolio(currentUserName));
+                model.addAttribute("accounts", accountService.getAccounts(currentUserName));
+                model.addAttribute("instanceInfo", marketService.getInstanceInfo());
+            } catch (HttpServerErrorException e) {
+                model.addAttribute("portfolioRetrievalError", e.getMessage());
+            }
+        }
+        logger.debug("/trade.GET completed");
+        return "trade";
+    }
 
 
-	@RequestMapping(value = "/trade", method = RequestMethod.POST)
-	public String showTrade(Model model, @ModelAttribute("search") Search search) {
-		logger.debug("/trade.POST - symbol: " + search.getName());
-		
-		//model.addAttribute("marketSummary", marketService.getMarketSummary());
-		model.addAttribute("search", search);
-		
-		if (search.getName() == null || search.getName().equals("") ) {
-			model.addAttribute("quotes", new ArrayList<Quote>());
-		} else {
-			List<Quote> newQuotes = getQuotes(search.getName());
-			model.addAttribute("quotes", newQuotes);
-		}
-		//check if user is logged in!
-		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-		if (!(authentication instanceof AnonymousAuthenticationToken)) {
-		    String currentUserName = authentication.getName();
-		    logger.debug("User logged in: " + currentUserName);
-		    model.addAttribute("order", new Order());
-		    
-		    
-		    //TODO: add portfolio and account summary.
-		    try {
-		    	model.addAttribute("portfolio",portfolioService.getPortfolio(currentUserName));
-		    	model.addAttribute("accounts",accountService.getAccounts(currentUserName));
-				model.addAttribute("instanceInfo", marketService.getInstanceInfo());
-		    } catch (HttpServerErrorException e) {
-		    	model.addAttribute("portfolioRetrievalError",e.getMessage());
-		    }
-		}
-		
-		return "trade";
-	}
+    public String showTradeGetFallback(Model model) {
+        logger.debug("/trade.GET fallback");
+        model.addAttribute("search", new Search());
+        return "trade";
+    }
 
-	@RequestMapping(value = "/trade/kill", method = RequestMethod.POST)
-	public String killTrade(Model model) {
-		logger.debug("/trade/kill.GET");
-		marketService.killInstance();
-		return showTrade(model);
-	}
-	
-	@RequestMapping(value = "/order", method = RequestMethod.POST)
-	public String buy(Model model, @ModelAttribute("order") Order order) {
-		model.addAttribute("search", new Search());
-		
-		// buy the order after setting attributes not set by the UI.
-		//check if user is logged in!
-				Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-				if (!(authentication instanceof AnonymousAuthenticationToken)) {
-				    String currentUserName = authentication.getName();
-				    logger.debug("/order ORDER: " + order);
-				    order.setUserId(currentUserName);
-				    order.setCompletionDate(new Date());
 
-				    Order result = portfolioService.sendOrder(order);
-				    model.addAttribute("savedOrder", result);
-				    model.addAttribute("order", new Order());
-				    try {
-				    	model.addAttribute("accounts",accountService.getAccounts(currentUserName));
-				    	model.addAttribute("portfolio",portfolioService.getPortfolio(currentUserName));
-						model.addAttribute("instanceInfo", marketService.getInstanceInfo());
-				    } catch (HttpServerErrorException e) {
-				    	model.addAttribute("portfolioRetrievalError",e.getMessage());
-				    }
-				} else {
-					//should never get here!!!
-				}
-		return "trade";
-	}
-	
-	
-	private List<Quote> getQuotes(String companyName) {
-		logger.debug("Fetching quotes for companies that have: " + companyName + " in name or symbol");
-		List<CompanyInfo> companies = marketService.getCompanies(companyName);
-		
-		/*
-		 * Sleuth currently doesn't work with parallelStreams
-		 */
-		//get distinct companyinfos and get their respective quotes in parallel.
+    @RequestMapping(value = "/trade", method = RequestMethod.POST)
+    @HystrixCommand(fallbackMethod = "showTradePostFallback", commandProperties = {
+            @HystrixProperty(name = "execution.isolation.strategy", value = "SEMAPHORE")
+    })
+    public String showTrade(Model model, @ModelAttribute("search") Search search) {
+        logger.debug("/trade.POST - symbol: " + search.getName());
 
-		List<String> symbols = companies.stream().map(company -> company.getSymbol()).collect(Collectors.toList());
-		logger.debug("symbols: fetching "+ symbols.size() + " quotes for following symbols: " + symbols);
-		List<String> distinctsymbols = symbols.stream().distinct().collect(Collectors.toList());
-		logger.debug("distinct: fetching "+ distinctsymbols.size() + " quotes for following symbols: " + distinctsymbols);
-		List<Quote> quotes;
-		if (distinctsymbols.size() > 0) {
-			quotes = marketService.getMultipleQuotes(distinctsymbols)
-					.stream()
-					.distinct()
-					.filter(quote -> quote.getName() != null && !"".equals(quote.getName()) && "SUCCESS".equals(quote.getStatus()))
-					.collect(Collectors.toList());
-		} else {
-			quotes = new ArrayList<>();
-		}
-		return quotes;
-	}
-	
-	private Quote getQuote(String symbol) {
-		return marketService.getQuote(symbol);
-	}
-	
-	@ExceptionHandler({ Exception.class })
-	public ModelAndView error(HttpServletRequest req, Exception exception) {
-		logger.debug("Handling error: " + exception);
-		logger.warn("Exception:", exception);
-		ModelAndView model = new ModelAndView();
-		model.addObject("errorCode", exception.getMessage());
-		model.addObject("errorMessage", exception);
-		model.setViewName("error");
-		return model;
-	}
-	
+        //model.addAttribute("marketSummary", marketService.getMarketSummary());
+        model.addAttribute("search", search);
+
+        if (search.getName() == null || search.getName().equals("")) {
+            model.addAttribute("quotes", new ArrayList<Quote>());
+        } else {
+            List<Quote> newQuotes = getQuotes(search.getName());
+            model.addAttribute("quotes", newQuotes);
+        }
+        //check if user is logged in!
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        logger.debug("Authentication info: {}", authentication);
+        if (!(authentication instanceof AnonymousAuthenticationToken)) {
+            String currentUserName = authentication.getName();
+            logger.debug("User logged in: " + currentUserName);
+            model.addAttribute("order", new Order());
+
+
+            //TODO: add portfolio and account summary.
+            try {
+                model.addAttribute("portfolio", portfolioService.getPortfolio(currentUserName));
+                model.addAttribute("accounts", accountService.getAccounts(currentUserName));
+                model.addAttribute("instanceInfo", marketService.getInstanceInfo());
+            } catch (HttpServerErrorException e) {
+                model.addAttribute("portfolioRetrievalError", e.getMessage());
+            }
+        }
+        logger.debug("/trade.POST completed");
+
+        return "trade";
+    }
+
+    public String showTradePostFallback(Model model, @ModelAttribute("search") Search search) {
+        logger.debug("/trade.POST fallback - symbol: " + search.getName());
+        model.addAttribute("search", search);
+        if (search.getName() == null || search.getName().equals("")) {
+            model.addAttribute("quotes", new ArrayList<Quote>());
+        }
+
+        model.addAttribute("order", new Order());
+        return "trade";
+    }
+
+    @RequestMapping(value = "/trade/kill", method = RequestMethod.POST)
+    public String killTrade(Model model) {
+        logger.debug("/trade/kill.GET");
+        marketService.killInstance();
+        return showTrade(model);
+    }
+
+    @RequestMapping(value = "/order", method = RequestMethod.POST)
+    public String buy(Model model, @ModelAttribute("order") Order order) {
+        model.addAttribute("search", new Search());
+
+        // buy the order after setting attributes not set by the UI.
+        //check if user is logged in!
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (!(authentication instanceof AnonymousAuthenticationToken)) {
+            String currentUserName = authentication.getName();
+            logger.debug("/order ORDER: " + order);
+            order.setUserId(currentUserName);
+            order.setCompletionDate(new Date());
+
+            Order result = portfolioService.sendOrder(order);
+            model.addAttribute("savedOrder", result);
+            model.addAttribute("order", new Order());
+            try {
+                model.addAttribute("accounts", accountService.getAccounts(currentUserName));
+                model.addAttribute("portfolio", portfolioService.getPortfolio(currentUserName));
+                model.addAttribute("instanceInfo", marketService.getInstanceInfo());
+            } catch (HttpServerErrorException e) {
+                model.addAttribute("portfolioRetrievalError", e.getMessage());
+            }
+        } else {
+            //should never get here!!!
+        }
+        return "trade";
+    }
+
+
+    private List<Quote> getQuotes(String companyName) {
+        logger.debug("Fetching quotes for companies that have: " + companyName + " in name or symbol");
+        List<CompanyInfo> companies = marketService.getCompanies(companyName);
+
+        /*
+         * Sleuth currently doesn't work with parallelStreams
+         */
+        //get distinct companyinfos and get their respective quotes in parallel.
+
+        List<String> symbols = companies.stream().map(company -> company.getSymbol()).collect(Collectors.toList());
+        logger.debug("symbols: fetching " + symbols.size() + " quotes for following symbols: " + symbols);
+        List<String> distinctsymbols = symbols.stream().distinct().collect(Collectors.toList());
+        logger.debug("distinct: fetching " + distinctsymbols.size() + " quotes for following symbols: " + distinctsymbols);
+        List<Quote> quotes;
+        if (distinctsymbols.size() > 0) {
+            quotes = marketService.getMultipleQuotes(distinctsymbols)
+                    .stream()
+                    .distinct()
+                    .filter(quote -> quote.getName() != null && !"".equals(quote.getName()) && "SUCCESS".equals(quote.getStatus()))
+                    .collect(Collectors.toList());
+        } else {
+            quotes = new ArrayList<>();
+        }
+        logger.debug("Fetching quotes completed...");
+        return quotes;
+    }
+
+    private Quote getQuote(String symbol) {
+        return marketService.getQuote(symbol);
+    }
+
+    @ExceptionHandler({Exception.class})
+    public ModelAndView error(HttpServletRequest req, Exception exception) {
+        logger.debug("Handling error: " + exception);
+        logger.warn("Exception:", exception);
+        ModelAndView model = new ModelAndView();
+        model.addObject("errorCode", exception.getMessage());
+        model.addObject("errorMessage", exception);
+        model.setViewName("error");
+        return model;
+    }
+
 }

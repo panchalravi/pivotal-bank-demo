@@ -79,7 +79,7 @@ public class UserController {
 	@RequestMapping(value = "/login", method = RequestMethod.POST)
 	//@RequestMapping(value = "/login")
 	public String login(Model model, @ModelAttribute(value="login") AuthenticationRequest login) {
-		logger.info("Logging in, user: " + login.getUsername());
+		logger.debug("Logging in, user: " + login.getUsername());
 		//need to add account object to session?
 		//CustomDetails userDetails = (CustomDetails)SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 		logger.debug("Principal: " + SecurityContextHolder.getContext().

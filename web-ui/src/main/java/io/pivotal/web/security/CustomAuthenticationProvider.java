@@ -1,5 +1,6 @@
 package io.pivotal.web.security;
 
+import io.pivotal.web.controller.UserController;
 import io.pivotal.web.domain.AuthenticationRequest;
 import io.pivotal.web.service.UserService;
 
@@ -7,6 +8,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -20,13 +23,15 @@ import org.springframework.web.client.HttpServerErrorException;
 
 @Component
 public class CustomAuthenticationProvider implements AuthenticationProvider {
-
+	private static final Logger logger = LoggerFactory
+			.getLogger(CustomAuthenticationProvider.class);
 	@Autowired
 	private UserService service;
 
 	@Override
 	public Authentication authenticate(Authentication authentication)
 			throws AuthenticationException {
+		logger.debug("Authenticating user: {}", authentication);
 		String name = authentication.getName();
 		String password = authentication.getCredentials().toString();
 		AuthenticationRequest request = new AuthenticationRequest();

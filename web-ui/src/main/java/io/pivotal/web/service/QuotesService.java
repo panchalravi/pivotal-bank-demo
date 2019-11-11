@@ -80,6 +80,10 @@ public class QuotesService {
 	public Map<String, Object> getInstanceInfoFallback() {
 		logger.debug("Fetching default quotes service instance info...");
 		Map<String, Object> instanceInfo = new HashMap<>();
+		instanceInfo.put("applicationName", "");
+		instanceInfo.put("instanceIndex", "0");
+		instanceInfo.put("instanceAddr", "0.0.0.0");
+		instanceInfo.put("containerAddr", "0.0.0.0");
 		return instanceInfo;
 	}
 
