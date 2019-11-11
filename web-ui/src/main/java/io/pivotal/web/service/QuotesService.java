@@ -70,9 +70,16 @@ public class QuotesService {
 		return restTemplate.getForObject(downstreamProtocol + "://" + quotesService + "/v1/basics?doit=true", String.class);
 	}
 
+	@HystrixCommand(fallbackMethod = "getInstanceInfoFallback")
 	public Map<String, Object> getInstanceInfo() {
 		logger.debug("Fetching quotes service instance info... ");
 		Map<String, Object> instanceInfo = restTemplate.getForObject(downstreamProtocol + "://" + quotesService + "/v1/basics", Map.class);
+		return instanceInfo;
+	}
+
+	public Map<String, Object> getInstanceInfoFallback() {
+		logger.debug("Fetching default quotes service instance info...");
+		Map<String, Object> instanceInfo = new HashMap<>();
 		return instanceInfo;
 	}
 
